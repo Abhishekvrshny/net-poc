@@ -252,7 +252,7 @@ int main (int argc, char *argv[]) {
     struct epoll_event event;
     struct epoll_event *events;
     int dest_fd;
-    int splice = 1, done = 1;
+    int err, splice = 1;
     int pipe_size = 65536;
 
     if (argc < 4) {
@@ -373,7 +373,7 @@ int main (int argc, char *argv[]) {
                    completely, as we are running in edge-triggered mode
                    and won't get a notification again for the same
                    data. */
-
+                err = 0;
                 connect_destination(&dest_fd, argv[2], strtol(argv[3],NULL,10));
 
                 struct rusage ru_s, ru_e;
@@ -384,10 +384,10 @@ int main (int argc, char *argv[]) {
                 getrusage(RUSAGE_SELF, &ru_s);
 
                 if (splice) {
-                    done = !spliced_copy(events[i].data.fd, dest_fd,pipe_size);
+                    err = spliced_copy(events[i].data.fd, dest_fd,pipe_size);
                 }
                 else {
-                    done = !normal_copy(events[i].data.fd, dest_fd,pipe_size);
+                    err = normal_copy(events[i].data.fd, dest_fd,pipe_size);
                 }
 
                 gettimeofday(&end, NULL);
@@ -402,7 +402,7 @@ int main (int argc, char *argv[]) {
                 printf("total time Taken to copy : %d micro seconds\n",elapsed);
                 printf("usr=%lu, sys=%lu, real=%lu\n", ut, st, rt);
 
-                if (done) {
+                if (!err) {
                     printf ("Closed connection on descriptor %d and %d\n",
                             events[i].data.fd, dest_fd);
 
