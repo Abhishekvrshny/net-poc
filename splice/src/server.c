@@ -80,6 +80,8 @@ static int normal_copy(int in_fd, int out_fd, int buff_size) {
     int done = 0;
     ssize_t len_r=-1, len_w=-1;
 
+    printf("NORMAL Copy\n");
+
     while (len_r != 0) {
         char buf[buff_size];
         errno = 0;
@@ -130,6 +132,8 @@ static int spliced_copy(int in_fd, int out_fd, int pipe_size) {
     int filedes[2];
     int err = -1;
     int len, len_r, len_w;
+
+    printf("SPLICE Copy\n");
 
     if(pipe(filedes) < 0) {
         perror("pipe:");
@@ -347,7 +351,7 @@ int main (int argc, char *argv[]) {
                             sbuf, sizeof sbuf,
                             NI_NUMERICHOST | NI_NUMERICSERV);
                     if (s == 0) {
-                        printf("Accepted connection on descriptor %d "
+                        printf("--------\nAccepted connection on descriptor %d "
                                 "(host=%s, port=%s)\n", infd, hbuf, sbuf);
                     }
 
