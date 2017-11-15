@@ -12,12 +12,43 @@
 
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 #define MAXEVENTS 64
+
+unsigned long mtime_since(struct timeval *s, struct timeval *e) {
+    long sec, usec, ret;
+
+    sec = e->tv_sec - s->tv_sec;
+    usec = e->tv_usec - s->tv_usec;
+    if (sec > 0 && usec < 0) {
+        sec--;
+        usec += 1000000;
+    }
+
+    sec *= 1000UL;
+    usec /= 1000UL;
+    ret = sec + usec;
+
+    /*
+     * time warp bug on some kernels?
+     */
+    if (ret < 0)
+        ret = 0;
+
+    return ret;
+}
+
+unsigned long mtime_since_now(struct timeval *s) {
+    struct timeval t;
+
+    gettimeofday(&t, NULL);
+    return mtime_since(s, &t);
+}
 
 void connect_destination(int *sockfd, char *host, int port) {
     struct hostent *he;
@@ -223,7 +254,6 @@ int main (int argc, char *argv[]) {
     int dest_fd;
     int splice = 1, done = 1;
     int pipe_size = 65536;
-    struct timeval st, et;
 
     if (argc < 4) {
         fprintf (stderr, "Usage: %s [server port] [destination host] [destination port] [(s)pliced copy (default) / (n)ormal copy] [buffer size in bytes, (default 65536)]\n", argv[0]);
@@ -346,7 +376,12 @@ int main (int argc, char *argv[]) {
 
                 connect_destination(&dest_fd, argv[2], strtol(argv[3],NULL,10));
 
-                gettimeofday(&st,NULL);
+                struct rusage ru_s, ru_e;
+                unsigned long ut, st, rt;
+                struct timeval start, end;
+
+                gettimeofday(&start, NULL);
+                getrusage(RUSAGE_SELF, &ru_s);
 
                 if (splice) {
                     done = !spliced_copy(events[i].data.fd, dest_fd,pipe_size);
@@ -355,9 +390,17 @@ int main (int argc, char *argv[]) {
                     done = !normal_copy(events[i].data.fd, dest_fd,pipe_size);
                 }
 
-                gettimeofday(&et,NULL);
-                int elapsed = ((et.tv_sec - st.tv_sec) * 1000000) + (et.tv_usec - st.tv_usec);
-                printf("\n Time Taken to copy : %d micro seconds\n",elapsed);
+                gettimeofday(&end, NULL);
+                getrusage(RUSAGE_SELF, &ru_e);
+
+                ut = mtime_since(&ru_s.ru_utime, &ru_e.ru_utime);
+                st = mtime_since(&ru_s.ru_stime, &ru_e.ru_stime);
+                rt = mtime_since_now(&start);
+
+                int elapsed = ((end.tv_sec - start.tv_sec) * 1000000) + (end.tv_usec - start.tv_usec);
+
+                printf("total time Taken to copy : %d micro seconds\n",elapsed);
+                printf("usr=%lu, sys=%lu, real=%lu\n", ut, st, rt);
 
                 if (done) {
                     printf ("Closed connection on descriptor %d and %d\n",
