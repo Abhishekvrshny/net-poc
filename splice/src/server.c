@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,11 +126,9 @@ static int normal_copy(int in_fd, int out_fd, int buff_size) {
 }
 
 static int spliced_copy(int in_fd, int out_fd, int pipe_size) {
-    loff_t in_off = 0;
-    loff_t out_off = 0;
     int filedes[2];
     int err = -1;
-    int len, len_r, len_w;
+    int len_r, len_w;
 
     printf("SPLICE Copy\n");
 
@@ -163,7 +160,6 @@ static int spliced_copy(int in_fd, int out_fd, int pipe_size) {
             break;
             goto out_close;
         }
-        len = len_r;
         while(len_r > 0) {
             errno = 0;
             len_w = splice(filedes[0], NULL, out_fd, NULL, len_r, SPLICE_F_MOVE | SPLICE_F_MORE);
