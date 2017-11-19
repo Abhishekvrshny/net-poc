@@ -32,6 +32,8 @@ $ dd if=/dev/urandom of=4MB.txt bs=4096 count=1024
 ```
 Use the *client* to transfer the payload to the *server*
 ```sh
+$ ./client
+Usage: ./client [server address] [server port] [file]
 $ ./client localhost 8000 4MB.txt
 Total bytes sent = 4194304
 ```

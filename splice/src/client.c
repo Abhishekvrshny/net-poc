@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     size_t len;
 
     if (argc != 4) {
-        fprintf(stderr,"usage: client hostname port file\n");
+        fprintf(stderr,"Usage: %s [server address] [server port] [file]\n", argv[0]);
         exit(1);
     }
 
